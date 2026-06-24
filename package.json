@@ -1,0 +1,28 @@
+{
+  "name": "bingoz-parking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SaaS B2B software-only pour propriétaires-exploitants de parking.",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @bingoz/database db:generate",
+    "db:migrate": "pnpm --filter @bingoz/database db:migrate",
+    "db:seed": "pnpm --filter @bingoz/database db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@next/eslint-plugin-next": "^15.5.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.42.0"
+  }
+}

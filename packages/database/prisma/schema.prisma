@@ -1,0 +1,361 @@
+// Schéma Prisma — source de vérité du modèle de données Bingo'z Parking.
+// Multi-tenant : toute table métier porte `tenantId` et est filtrée côté serveur.
+// Conformité : Vehicle.retentionUntil/anonymizedAt (RGPD plaque),
+// Invoice.archiveUntil (conservation fiscale), AuditLog (journalisation).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  gestionnaire
+  agent
+}
+
+enum SpaceType {
+  hourly
+  subscriber
+  pmr
+  ev
+  mixed
+}
+
+enum OfferType {
+  hourly
+  daily
+  nightly
+  monthly
+  subscription
+}
+
+enum PriceUnit {
+  hour
+  day
+  month
+  flat
+}
+
+enum ReservationStatus {
+  draft
+  pending_payment
+  confirmed
+  cancelled
+  expired
+  completed
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum AccessCredentialType {
+  qr_code
+  access_code
+  manual
+}
+
+enum IncidentStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  parkings  Parking[]
+  customers Customer[]
+  auditLogs AuditLog[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  name      String?
+  role      UserRole @default(gestionnaire)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Parking {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  slug        String   @unique
+  address     String
+  city        String
+  postalCode  String
+  countryCode String   @default("FR")
+  timezone    String   @default("Europe/Paris")
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  zones         Zone[]
+  spaces        Space[]
+  offers        Offer[]
+  reservations  Reservation[]
+  subscriptions Subscription[]
+  incidents     Incident[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Zone {
+  id        String   @id @default(cuid())
+  tenantId  String
+  parkingId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parking Parking @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+  spaces  Space[]
+
+  @@index([tenantId])
+  @@index([parkingId])
+}
+
+model Space {
+  id        String    @id @default(cuid())
+  tenantId  String
+  parkingId String
+  zoneId    String?
+  label     String
+  type      SpaceType @default(mixed)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  parking Parking @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, parkingId, label])
+  @@index([tenantId])
+  @@index([parkingId])
+}
+
+model Offer {
+  id          String    @id @default(cuid())
+  tenantId    String
+  parkingId   String
+  name        String
+  type        OfferType
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  parking      Parking       @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+  priceRules   PriceRule[]
+  reservations Reservation[]
+
+  @@index([tenantId])
+  @@index([parkingId])
+}
+
+model PriceRule {
+  id            String    @id @default(cuid())
+  tenantId      String
+  offerId       String
+  label         String
+  unit          PriceUnit
+  amountInCents Int
+  currency      String    @default("EUR")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([offerId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  firstName String?
+  lastName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicles      Vehicle[]
+  reservations  Reservation[]
+  subscriptions Subscription[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Vehicle {
+  id             String    @id @default(cuid())
+  tenantId       String
+  customerId     String
+  plateNumber    String
+  countryCode    String    @default("FR")
+  label          String?
+  retentionUntil DateTime?
+  anonymizedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([customerId])
+}
+
+model Reservation {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  parkingId          String
+  offerId            String
+  customerId         String
+  startsAt           DateTime
+  endsAt             DateTime
+  status             ReservationStatus @default(draft)
+  amountInCents      Int
+  currency           String            @default("EUR")
+  cancellationReason String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  parking           Parking            @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+  offer             Offer              @relation(fields: [offerId], references: [id])
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  payments          Payment[]
+  invoices          Invoice[]
+  accessCredentials AccessCredential[]
+
+  @@index([tenantId])
+  @@index([parkingId, startsAt, endsAt])
+  @@index([customerId])
+}
+
+model Subscription {
+  id         String    @id @default(cuid())
+  tenantId   String
+  parkingId  String
+  customerId String
+  startsAt   DateTime
+  endsAt     DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  parking  Parking  @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([tenantId])
+  @@index([parkingId])
+  @@index([customerId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  tenantId        String
+  reservationId   String
+  stripePaymentId String?
+  status          PaymentStatus @default(pending)
+  amountInCents   Int
+  currency        String        @default("EUR")
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([reservationId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  tenantId      String
+  reservationId String
+  invoiceNumber String
+  amountInCents Int
+  currency      String   @default("EUR")
+  issuedAt      DateTime @default(now())
+  archiveUntil  DateTime
+  createdAt     DateTime @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([reservationId])
+}
+
+model AccessCredential {
+  id            String               @id @default(cuid())
+  tenantId      String
+  reservationId String
+  type          AccessCredentialType
+  valueHash     String
+  expiresAt     DateTime
+  createdAt     DateTime             @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([reservationId])
+}
+
+model Incident {
+  id          String         @id @default(cuid())
+  tenantId    String
+  parkingId   String
+  title       String
+  description String?
+  status      IncidentStatus @default(open)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  parking Parking @relation(fields: [parkingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([parkingId])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  actorUserId  String?
+  action       String
+  resourceType String
+  resourceId   String
+  ipAddress    String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([resourceType, resourceId])
+}

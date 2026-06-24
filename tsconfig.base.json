@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@bingoz/domain": ["packages/domain/src/index.ts"],
+      "@bingoz/domain/*": ["packages/domain/src/*"],
+      "@bingoz/hardware": ["packages/hardware/src/index.ts"],
+      "@bingoz/hardware/*": ["packages/hardware/src/*"]
+    }
+  }
+}

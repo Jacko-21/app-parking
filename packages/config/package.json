@@ -1,0 +1,7 @@
+{
+  "name": "@bingoz/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configurations partagées (réservé pour presets ESLint/TS/Tailwind communs).",
+  "files": ["README.md"]
+}

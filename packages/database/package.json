@@ -1,0 +1,19 @@
+{
+  "name": "@bingoz/database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "echo \"Seed à implémenter (cf. docs/07-scope-mvp.md)\"",
+    "lint": "echo \"Pas de source TS à linter dans @bingoz/database\"",
+    "typecheck": "echo \"Pas de source TS à typer dans @bingoz/database\""
+  },
+  "dependencies": {
+    "@prisma/client": "^6.15.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.15.0"
+  }
+}
