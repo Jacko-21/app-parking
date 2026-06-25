@@ -116,3 +116,38 @@ Les agents locaux offline-first, MQTT, LAPI et intégrations barrières devienne
 3. MVP software-only → valide la valeur métier avant de financer l'agent local.
 4. POC d'intégration hardware ultérieur avec 1 partenaire LAPI et 1 marque de barrière → valide la faisabilité agent local.
 5. Toute révision majeure est documentée ici, dans une section datée.
+
+---
+
+## Révision du 2026-06-25 — vision produit/service, beachhead et user research
+
+> Session de cadrage avec le fondateur. Ces points précisent (sans les annuler) les décisions du 2026-05-07. Ils restent révisables après user research.
+
+### R1 — Modèle clarifié : « logiciel + exploitation clé-en-main »
+
+La décision 6.2 (application configurable) est complétée d'un **second volet assumé** : en plus du SaaS, Bingo'z proposera une **offre d'exploitation déléguée du parking en option** — gérer l'exploitation à la place du client (ex. remplacer des salariés en congés, prendre en charge l'opérationnel).
+
+- Le **logiciel reste le produit principal** ; l'exploitation déléguée est un **upsell**, vendu aux clients qui le souhaitent.
+- Différenciant central retenu : **« logiciel + exploitation clé-en-main »**, positionnement qu'aucun pur éditeur SaaS (Wayleadr, Yespark, Skidata) ne tient. Cela répond aussi à la mise en garde de `04-contraintes.md` (le SaaS pur sans services est un piège dans ce secteur).
+
+**Implications à traiter (ne pas pricer le service comme du SaaS) :**
+- Modèle financier : séparer marge logicielle (élevée, scalable) et marge service (faible, linéaire avec le staffing).
+- Go-to-market, RH et **responsabilité juridique** de l'exploitation : périmètre et assurances à cadrer avant de vendre le service.
+- Architecture : le service s'appuie sur le même produit ; pas de fork. Le volet exploitation peut servir de **terrain de validation** du logiciel (dogfooding).
+
+### R2 — Beachhead resserré : parkings de centre commercial
+
+La cible 6.1 (propriétaires-exploitants) était trop large (6 sous-segments hétérogènes). **Beachhead retenu pour les 12 premiers mois : les parkings de centre commercial.**
+
+- Terrain concret d'observation/pilote : le **parking du centre Beaugrenelle** (Paris 15e).
+- Critère de choix : accès terrain immédiat + décideur identifiable + cycle plus court que les foncières nationales.
+- Conséquence : user stories, argumentaire et user research sont **priorisés sur ce segment** (pas sur les 6 catégories).
+
+### R3 — User research = jalon n°1 bloquant
+
+Le fondateur exploite un **lavage auto**, pas un parking : la douleur est observée, pas vécue. Donc **avant** la spec fonctionnelle détaillée :
+
+- Mener **8 à 10 interviews** d'exploitants de parkings de centre commercial (Beaugrenelle et similaires).
+- Valider les deux volets (logiciel ET appétence pour l'exploitation déléguée).
+- Tant que ces interviews ne sont pas faites, le cadrage reste hypothétique.
+
