@@ -6,12 +6,25 @@ import {
   type ExistingReservation,
   type TenantContext,
 } from "@bingoz/domain";
+import type { z } from "zod";
 
 import { PrismaService } from "../database/prisma.service";
 import {
   type CreateManualReservationDto,
   createManualReservationSchema,
 } from "./dto/create-manual-reservation.dto";
+import {
+  cancelReservationSchema,
+  listReservationsSchema,
+  type CancelReservationDto,
+  type ListReservationsDto,
+} from "./dto/manage-reservation.dto";
+
+const NON_CANCELLABLE_STATUSES: ReadonlyArray<ReservationStatus> = [
+  ReservationStatus.cancelled,
+  ReservationStatus.expired,
+  ReservationStatus.completed,
+];
 
 const BLOCKING_RESERVATION_STATUSES = [
   ReservationStatus.pending_payment,
@@ -214,6 +227,96 @@ export class ReservationService {
       customerId: result.customer.id,
       vehicleId: result.vehicle?.id ?? null,
     };
+  }
+
+  async listReservations(context: TenantContext, input: ListReservationsDto) {
+    const dto = this.parse(listReservationsSchema, input);
+
+    const where: Prisma.ReservationWhereInput = {
+      tenantId: context.tenantId,
+      parkingId: dto.parkingId,
+    };
+    if (dto.status !== undefined) {
+      where.status = dto.status;
+    }
+    const startsAt: Prisma.DateTimeFilter = {};
+    if (dto.from !== undefined) startsAt.gte = new Date(dto.from);
+    if (dto.to !== undefined) startsAt.lte = new Date(dto.to);
+    if (dto.from !== undefined || dto.to !== undefined) {
+      where.startsAt = startsAt;
+    }
+
+    return this.prisma.reservation.findMany({
+      where,
+      orderBy: { startsAt: "asc" },
+      select: this.reservationListSelect,
+    });
+  }
+
+  async getReservation(context: TenantContext, reservationId: string) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, tenantId: context.tenantId },
+      select: {
+        ...this.reservationListSelect,
+        payments: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, status: true, amountInCents: true, currency: true, paidAt: true },
+        },
+      },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException("Réservation introuvable pour ce tenant.");
+    }
+
+    return reservation;
+  }
+
+  async cancelReservation(context: TenantContext, reservationId: string, input: CancelReservationDto) {
+    const dto = this.parse(cancelReservationSchema, input);
+
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, tenantId: context.tenantId },
+      select: { id: true, status: true },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException("Réservation introuvable pour ce tenant.");
+    }
+
+    if (NON_CANCELLABLE_STATUSES.includes(reservation.status)) {
+      throw new ConflictException("Réservation déjà clôturée : annulation impossible.");
+    }
+
+    const data: Prisma.ReservationUpdateInput = { status: ReservationStatus.cancelled };
+    if (dto.reason !== undefined) {
+      data.cancellationReason = dto.reason;
+    }
+
+    return this.prisma.reservation.update({
+      where: { id: reservationId },
+      data,
+      select: { id: true, status: true, cancellationReason: true },
+    });
+  }
+
+  private readonly reservationListSelect = {
+    id: true,
+    status: true,
+    startsAt: true,
+    endsAt: true,
+    amountInCents: true,
+    currency: true,
+    customer: { select: { id: true, email: true, firstName: true, lastName: true } },
+    offer: { select: { id: true, name: true, type: true } },
+  } satisfies Prisma.ReservationSelect;
+
+  private parse<Output>(schema: z.ZodType<Output>, input: unknown): Output {
+    const parsed = schema.safeParse(input);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.flatten());
+    }
+    return parsed.data;
   }
 
   private parseCreateManualReservation(input: CreateManualReservationDto): CreateManualReservationDto {
