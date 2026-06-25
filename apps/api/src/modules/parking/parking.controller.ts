@@ -1,18 +1,15 @@
-import { Controller, Get, Headers } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
+import type { TenantContext } from "@bingoz/domain";
 
-import { TenantContextService } from "../tenant/tenant-context.service";
+import { CurrentTenant } from "../auth/decorators/current-tenant.decorator";
 import { ParkingService, type ParkingSummary } from "./parking.service";
 
 @Controller("parkings")
 export class ParkingController {
-  constructor(
-    private readonly parkingService: ParkingService,
-    private readonly tenantContextService: TenantContextService,
-  ) {}
+  constructor(private readonly parkingService: ParkingService) {}
 
   @Get()
-  listParkings(@Headers("x-tenant-id") tenantIdHeader: string | string[] | undefined): Promise<ParkingSummary[]> {
-    const context = this.tenantContextService.resolveFromDevHeader(tenantIdHeader);
+  listParkings(@CurrentTenant() context: TenantContext): Promise<ParkingSummary[]> {
     return this.parkingService.listParkings(context);
   }
 }

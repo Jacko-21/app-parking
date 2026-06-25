@@ -1,22 +1,21 @@
-import { Body, Controller, Headers, Post } from "@nestjs/common";
+import { Body, Controller, Post } from "@nestjs/common";
+import type { TenantContext } from "@bingoz/domain";
 
-import { TenantContextService } from "../tenant/tenant-context.service";
+import { CurrentTenant } from "../auth/decorators/current-tenant.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
 import { type CreateManualReservationDto } from "./dto/create-manual-reservation.dto";
 import { ReservationService, type CreatedManualReservation } from "./reservation.service";
 
 @Controller("reservations")
 export class ReservationController {
-  constructor(
-    private readonly reservationService: ReservationService,
-    private readonly tenantContextService: TenantContextService,
-  ) {}
+  constructor(private readonly reservationService: ReservationService) {}
 
+  @Roles("admin", "gestionnaire")
   @Post()
   createManualReservation(
-    @Headers("x-tenant-id") tenantIdHeader: string | string[] | undefined,
+    @CurrentTenant() context: TenantContext,
     @Body() body: CreateManualReservationDto,
   ): Promise<CreatedManualReservation> {
-    const context = this.tenantContextService.resolveFromDevHeader(tenantIdHeader);
     return this.reservationService.createManualReservation(context, body);
   }
 }
