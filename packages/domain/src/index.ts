@@ -9,6 +9,8 @@ export type {
   StaticPriceQuote,
 } from "./pricing";
 
+export { computeFiscalArchiveUntil, FISCAL_RETENTION_YEARS } from "./billing";
+
 export { getCapacityAvailability } from "./availability";
 export type {
   ExistingReservation,
