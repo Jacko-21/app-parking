@@ -8,6 +8,29 @@
 
 ---
 
+## Démarrage rapide (local)
+
+Prérequis : Node 22, pnpm 10, une base PostgreSQL.
+
+```bash
+pnpm install
+cp .env.example .env            # renseigner DATABASE_URL + AUTH_TOKEN_SECRET
+pnpm db:generate                # génère le client Prisma
+pnpm --filter @bingoz/database db:migrate   # applique les migrations
+pnpm db:seed                    # jeu de données démo (Beaugrenelle)
+pnpm dev                        # web (3000) + api (3001)
+```
+
+Données de démo créées par le seed :
+
+- **Exploitant** — connexion API `POST /auth/login` : `tenantSlug = beaugrenelle-demo`, `email = admin@beaugrenelle.test`, `password = demo1234`.
+- **Tableau de bord** : http://localhost:3000
+- **Page publique automobiliste** : http://localhost:3000/parkings/beaugrenelle
+
+Qualité : `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (tout doit passer).
+
+---
+
 ## Pour les assistants IA (Claude Code, Codex, Cursor, etc.)
 
 Ce dépôt est en phase de **pré-MVP software-only**. Avant toute génération de code substantielle :

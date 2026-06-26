@@ -6,7 +6,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "echo \"Seed à implémenter (cf. docs/07-scope-mvp.md)\"",
+    "db:seed": "node prisma/seed.mjs",
     "lint": "echo \"Pas de source TS à linter dans @bingoz/database\"",
     "typecheck": "echo \"Pas de source TS à typer dans @bingoz/database\""
   },
