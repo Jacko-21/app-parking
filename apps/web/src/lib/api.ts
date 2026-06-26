@@ -1,6 +1,9 @@
+import { cookies } from "next/headers";
+
 const API_BASE_URL =
   process.env["API_BASE_URL"] ?? process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
 const DEV_TENANT_ID = process.env["DEV_TENANT_ID"] ?? "tenant_demo";
+export const AUTH_COOKIE = "bingoz_token";
 
 export type ParkingSummary = {
   id: string;
@@ -43,12 +46,34 @@ export type PublicParkingPriceRule = {
   currency: string;
 };
 
+export type ReservationSummary = {
+  id: string;
+  status: string;
+  startsAt: string;
+  endsAt: string;
+  amountInCents: number;
+  currency: string;
+  customer: { id: string; email: string; firstName: string | null; lastName: string | null };
+  offer: { id: string; name: string; type: string };
+};
+
+async function operatorHeaders(): Promise<Record<string, string>> {
+  const store = await cookies();
+  const token = store.get(AUTH_COOKIE)?.value;
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  // Repli développement tant que la session n'est pas établie.
+  return { "x-tenant-id": DEV_TENANT_ID };
+}
+
 export async function fetchTenantParkings(): Promise<ParkingSummary[]> {
-  return fetchJson<ParkingSummary[]>("/parkings", {
-    headers: {
-      "x-tenant-id": DEV_TENANT_ID,
-    },
-  });
+  return fetchJson<ParkingSummary[]>("/parkings", { headers: await operatorHeaders() });
+}
+
+export async function fetchTenantReservations(parkingId: string): Promise<ReservationSummary[]> {
+  const query = new URLSearchParams({ parkingId }).toString();
+  return fetchJson<ReservationSummary[]>(`/reservations?${query}`, { headers: await operatorHeaders() });
 }
 
 export async function fetchPublicParking(slug: string): Promise<PublicParking> {

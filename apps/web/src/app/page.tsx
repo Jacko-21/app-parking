@@ -2,7 +2,12 @@ import { AlertTriangle, CalendarDays, Gauge, ParkingCircle, Plus, SquareParking,
 import Link from "next/link";
 
 import { StatCard } from "../components/stat-card";
-import { fetchTenantParkings, type ParkingSummary } from "../lib/api";
+import {
+  fetchTenantParkings,
+  fetchTenantReservations,
+  type ParkingSummary,
+  type ReservationSummary,
+} from "../lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +18,7 @@ export default async function DashboardPage() {
   const occupancyRate = activeSpaces === 0 ? 0 : activeReservations / activeSpaces;
   const publishedParkings = parkings.filter((parking) => parking.isPublished).length;
   const firstParking = parkings[0];
+  const reservations = firstParking ? await getReservations(firstParking.id) : [];
 
   return (
     <main className="min-h-screen">
@@ -38,6 +44,9 @@ export default async function DashboardPage() {
               href={firstParking ? `/parkings/${firstParking.slug}` : "/"}
             >
               Réservation
+            </Link>
+            <Link className="rounded-lg px-3 py-2 text-sm font-medium text-muted" href="/login">
+              Connexion
             </Link>
           </nav>
           <Link
@@ -146,9 +155,71 @@ export default async function DashboardPage() {
             </div>
           </aside>
         </section>
+
+        {firstParking ? (
+          <section
+            className="mt-8 rounded-lg border border-border bg-white shadow-panel"
+            aria-label="Réservations"
+          >
+            <div className="border-b border-border px-5 py-4">
+              <h2 className="text-lg font-semibold text-ink">Réservations — {firstParking.name}</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] border-collapse text-left text-sm">
+                <thead className="bg-surface text-muted">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Client</th>
+                    <th className="px-5 py-3 font-medium">Offre</th>
+                    <th className="px-5 py-3 font-medium">Créneau</th>
+                    <th className="px-5 py-3 font-medium">Montant</th>
+                    <th className="px-5 py-3 font-medium">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reservations.length === 0 ? (
+                    <tr>
+                      <td className="px-5 py-4 text-muted" colSpan={5}>
+                        Aucune réservation pour le moment.
+                      </td>
+                    </tr>
+                  ) : (
+                    reservations.map((reservation) => (
+                      <tr key={reservation.id} className="border-t border-border">
+                        <td className="px-5 py-4 text-ink">{reservation.customer.email}</td>
+                        <td className="px-5 py-4 text-muted">{reservation.offer.name}</td>
+                        <td className="px-5 py-4 text-muted">
+                          {new Date(reservation.startsAt).toLocaleString("fr-FR")}
+                        </td>
+                        <td className="px-5 py-4 text-muted">
+                          {(reservation.amountInCents / 100).toLocaleString("fr-FR", {
+                            style: "currency",
+                            currency: reservation.currency,
+                          })}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-ink">
+                            {reservation.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );
+}
+
+async function getReservations(parkingId: string): Promise<ReservationSummary[]> {
+  try {
+    return await fetchTenantReservations(parkingId);
+  } catch {
+    return [];
+  }
 }
 
 async function getParkings(): Promise<{ parkings: ParkingSummary[]; error: string | null }> {
