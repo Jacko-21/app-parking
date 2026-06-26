@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ReservationStatus, type Prisma } from "@prisma/client";
 import {
+  computeVehicleRetentionUntil,
+  DEFAULT_VEHICLE_RETENTION_DAYS,
   getCapacityAvailability,
   quoteStaticPrice,
   type ExistingReservation,
@@ -165,6 +167,10 @@ export class ReservationService {
       },
     });
 
+    const vehicleRetentionDays = dto.vehicle
+      ? await this.resolveVehicleRetentionDays(context.tenantId)
+      : DEFAULT_VEHICLE_RETENTION_DAYS;
+
     const result = await this.prisma.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
         where: {
@@ -189,7 +195,7 @@ export class ReservationService {
               plateNumber: dto.vehicle.plateNumber.toUpperCase(),
               countryCode: dto.vehicle.countryCode.toUpperCase(),
               ...this.buildVehicleLabelData(dto.vehicle.label),
-              retentionUntil: this.getVehicleRetentionUntil(endsAt),
+              retentionUntil: computeVehicleRetentionUntil(endsAt, vehicleRetentionDays),
             },
           })
         : null;
@@ -343,10 +349,12 @@ export class ReservationService {
     return data;
   }
 
-  private getVehicleRetentionUntil(endsAt: Date): Date {
-    const retentionUntil = new Date(endsAt);
-    retentionUntil.setMonth(retentionUntil.getMonth() + 3);
-    return retentionUntil;
+  private async resolveVehicleRetentionDays(tenantId: string): Promise<number> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { vehicleRetentionDays: true },
+    });
+    return tenant?.vehicleRetentionDays ?? DEFAULT_VEHICLE_RETENTION_DAYS;
   }
 
   private buildVehicleLabelData(label: string | undefined): { label?: string } {

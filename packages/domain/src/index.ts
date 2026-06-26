@@ -11,6 +11,14 @@ export type {
 
 export { computeFiscalArchiveUntil, FISCAL_RETENTION_YEARS } from "./billing";
 
+export {
+  clampRetentionDays,
+  computeVehicleRetentionUntil,
+  DEFAULT_VEHICLE_RETENTION_DAYS,
+  MIN_VEHICLE_RETENTION_DAYS,
+  MAX_VEHICLE_RETENTION_DAYS,
+} from "./rgpd";
+
 export { getCapacityAvailability } from "./availability";
 export type {
   ExistingReservation,

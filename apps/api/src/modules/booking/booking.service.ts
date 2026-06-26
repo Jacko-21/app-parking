@@ -8,6 +8,8 @@ import { AccessCredentialType, PaymentStatus, Prisma, ReservationStatus } from "
 import { createHash, randomBytes } from "node:crypto";
 import {
   computeFiscalArchiveUntil,
+  computeVehicleRetentionUntil,
+  DEFAULT_VEHICLE_RETENTION_DAYS,
   getCapacityAvailability,
   quoteStaticPrice,
   type ExistingReservation,
@@ -30,8 +32,6 @@ const CLOSED_RESERVATION_STATUSES: ReadonlyArray<ReservationStatus> = [
   ReservationStatus.cancelled,
   ReservationStatus.expired,
 ];
-
-const VEHICLE_RETENTION_MONTHS = 3;
 
 export type PublicReservationCreated = {
   reservationId: string;
@@ -135,6 +135,10 @@ export class BookingService {
       },
     });
 
+    const vehicleRetentionDays = dto.vehicle
+      ? await this.resolveVehicleRetentionDays(parking.tenantId)
+      : DEFAULT_VEHICLE_RETENTION_DAYS;
+
     const created = await this.prisma.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
         where: { tenantId_email: { tenantId: parking.tenantId, email: dto.customer.email } },
@@ -148,7 +152,7 @@ export class BookingService {
       });
 
       if (dto.vehicle) {
-        await this.recordVehicle(tx, parking.tenantId, customer.id, dto.vehicle, endsAt);
+        await this.recordVehicle(tx, parking.tenantId, customer.id, dto.vehicle, endsAt, vehicleRetentionDays);
       }
 
       const reservation = await tx.reservation.create({
@@ -278,16 +282,14 @@ export class BookingService {
     customerId: string,
     vehicle: { plateNumber: string; countryCode?: string | undefined; label?: string | undefined },
     endsAt: Date,
+    retentionDays: number,
   ): Promise<void> {
-    const retentionUntil = new Date(endsAt);
-    retentionUntil.setMonth(retentionUntil.getMonth() + VEHICLE_RETENTION_MONTHS);
-
     const data: Prisma.VehicleUncheckedCreateInput = {
       tenantId,
       customerId,
       plateNumber: vehicle.plateNumber.toUpperCase(),
       countryCode: (vehicle.countryCode ?? "FR").toUpperCase(),
-      retentionUntil,
+      retentionUntil: computeVehicleRetentionUntil(endsAt, retentionDays),
     };
     if (vehicle.label !== undefined) data.label = vehicle.label;
 
@@ -300,10 +302,18 @@ export class BookingService {
         resourceType: "Vehicle",
         resourceId: created.id,
         metadata: {
-          retention: `Plaque conservée ${VEHICLE_RETENTION_MONTHS} mois après la fin de réservation (MVP).`,
+          retention: `Plaque conservée ${retentionDays} jours après la fin de réservation.`,
         },
       },
     });
+  }
+
+  private async resolveVehicleRetentionDays(tenantId: string): Promise<number> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { vehicleRetentionDays: true },
+    });
+    return tenant?.vehicleRetentionDays ?? DEFAULT_VEHICLE_RETENTION_DAYS;
   }
 
   private buildCustomerName(customer: {

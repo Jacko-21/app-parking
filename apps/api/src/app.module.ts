@@ -8,6 +8,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { IncidentModule } from "./modules/incident/incident.module";
 import { ParkingModule } from "./modules/parking/parking.module";
 import { ReservationModule } from "./modules/reservation/reservation.module";
+import { RgpdModule } from "./modules/rgpd/rgpd.module";
 import { SubscriptionModule } from "./modules/subscription/subscription.module";
 
 @Module({
@@ -21,6 +22,7 @@ import { SubscriptionModule } from "./modules/subscription/subscription.module";
     SubscriptionModule,
     IncidentModule,
     BookingModule,
+    RgpdModule,
   ],
 })
 export class AppModule {}

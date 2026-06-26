@@ -38,6 +38,9 @@ describe("ReservationService", () => {
       },
     };
     const prisma = {
+      tenant: {
+        findUnique: vi.fn().mockResolvedValue({ vehicleRetentionDays: 90 }),
+      },
       parking: {
         findFirst: vi.fn().mockResolvedValue({ id: "parking_1" }),
       },
