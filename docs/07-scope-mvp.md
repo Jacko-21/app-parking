@@ -48,6 +48,18 @@ Un MVP qui :
 - [ ] **Gestion des incidents** : création et suivi d'incidents opérationnels, statut, journalisation.
 - [ ] **Multi-utilisateurs** : invitation d'un collègue, rôles (admin, gestionnaire, agent).
 
+> **Avancement console exploitant (`2026-06-30`)** — une console web (`/exploitation/*`) relie
+> désormais l'interface aux endpoints existants :
+>
+> - **Réservations** : liste filtrable par statut, création manuelle (devis + disponibilité côté API)
+>   et annulation. La vue calendrier reste à faire.
+> - **Abonnés** : liste, création, désactivation et suppression d'un contrat (dates de début/fin).
+>   L'attribution de place et le plan tarifaire restent à câbler.
+> - **Incidents** : ouverture d'un incident et évolution de son statut.
+>
+> Reste à construire côté exploitant : onboarding guidé, configuration parking/tarifs, encaissements
+> et multi-utilisateurs.
+
 ### Côté automobiliste (web responsive — pas d'app native au MVP)
 
 - [ ] **Page de réservation par parking** : URL unique par parking, recherche de créneau, sélection.
