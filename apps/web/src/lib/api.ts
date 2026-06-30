@@ -97,6 +97,22 @@ export type IncidentSummary = {
   createdAt: string;
 };
 
+export type DashboardDailyPoint = {
+  date: string;
+  revenueInCents: number;
+  reservationCount: number;
+};
+
+export type DashboardSummary = {
+  currency: string;
+  revenue: { todayInCents: number; last7DaysInCents: number; last30DaysInCents: number };
+  paidReservations: { today: number; last7Days: number; last30Days: number };
+  occupancy: { activeSpaces: number; activeReservations: number; rate: number };
+  parkings: { total: number; published: number };
+  reservationsByStatus: Record<string, number>;
+  dailyRevenue: DashboardDailyPoint[];
+};
+
 export type MutationResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; error: string };
@@ -122,6 +138,10 @@ export async function fetchTenantReservations(parkingId: string): Promise<Reserv
 
 export async function fetchParkingDetail(parkingId: string): Promise<ParkingDetail> {
   return fetchJson<ParkingDetail>(`/config/parkings/${parkingId}`, { headers: await operatorHeaders() });
+}
+
+export async function fetchTenantDashboard(): Promise<DashboardSummary> {
+  return fetchJson<DashboardSummary>("/dashboard", { headers: await operatorHeaders() });
 }
 
 export async function fetchOperatorReservations(params: {

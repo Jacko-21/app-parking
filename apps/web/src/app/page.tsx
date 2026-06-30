@@ -1,12 +1,23 @@
-import { AlertTriangle, CalendarDays, Gauge, Plus, SquareParking, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Gauge,
+  Plus,
+  SquareParking,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 
+import { DailyRevenueChart } from "../components/daily-revenue-chart";
 import { OperatorShell } from "../components/operator-shell";
 import { StatCard } from "../components/stat-card";
 import { StatusPill } from "../components/status-pill";
 import {
+  fetchTenantDashboard,
   fetchTenantParkings,
   fetchTenantReservations,
+  type DashboardSummary,
   type ParkingSummary,
   type ReservationSummary,
 } from "../lib/api";
@@ -14,17 +25,30 @@ import {
   formatCurrencyFromCents,
   formatDateTime,
   RESERVATION_STATUS_META,
+  RESERVATION_STATUS_OPTIONS,
   statusMeta,
 } from "../lib/labels";
 
 export const dynamic = "force-dynamic";
 
+const EMPTY = "—";
+
 export default async function DashboardPage() {
-  const { parkings, error } = await getParkings();
-  const activeSpaces = parkings.reduce((total, parking) => total + parking.activeSpaces, 0);
-  const activeReservations = parkings.reduce((total, parking) => total + parking.activeReservations, 0);
-  const occupancyRate = activeSpaces === 0 ? 0 : activeReservations / activeSpaces;
-  const publishedParkings = parkings.filter((parking) => parking.isPublished).length;
+  const [{ parkings, error }, summary] = await Promise.all([getParkings(), getDashboard()]);
+
+  const fallbackActiveSpaces = parkings.reduce((total, parking) => total + parking.activeSpaces, 0);
+  const fallbackActiveReservations = parkings.reduce(
+    (total, parking) => total + parking.activeReservations,
+    0,
+  );
+  const occupancy = summary
+    ? summary.occupancy
+    : {
+        activeSpaces: fallbackActiveSpaces,
+        activeReservations: fallbackActiveReservations,
+        rate: fallbackActiveSpaces === 0 ? 0 : fallbackActiveReservations / fallbackActiveSpaces,
+      };
+
   const firstParking = parkings[0];
   const reservations = firstParking ? await getReservations(firstParking.id) : [];
 
@@ -39,7 +63,9 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-ink">Tableau de bord</h1>
-          <p className="text-sm text-muted">Vue consolidée multi-tenant, données issues de l&apos;API.</p>
+          <p className="text-sm text-muted">
+            Chiffre d&apos;affaires, occupation et activité — agrégés côté API par tenant.
+          </p>
         </div>
         <Link
           className="inline-flex h-10 items-center gap-2 self-start rounded-lg bg-brand px-4 text-sm font-semibold text-white"
@@ -50,42 +76,73 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs">
+      <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs clés">
         <StatCard
-          icon={Gauge}
-          label="Occupation"
-          value={`${Math.round(occupancyRate * 100)} %`}
-          detail={`${activeReservations} réservation(s) active(s) pour ${activeSpaces} place(s) actives`}
-        />
-        <StatCard
-          icon={SquareParking}
-          label="Parkings"
-          value={String(parkings.length)}
-          detail={`${publishedParkings} parking(s) publié(s) côté automobiliste`}
+          icon={Wallet}
+          label="CA aujourd'hui"
+          value={revenueValue(summary?.revenue.todayInCents, summary?.currency)}
+          detail={paidDetail(summary?.paidReservations.today)}
         />
         <StatCard
           icon={CalendarDays}
-          label="Réservations"
-          value={String(activeReservations)}
-          detail="Créneaux bloquants remontés par l'API"
+          label="CA 7 jours"
+          value={revenueValue(summary?.revenue.last7DaysInCents, summary?.currency)}
+          detail={paidDetail(summary?.paidReservations.last7Days)}
         />
         <StatCard
-          icon={Users}
-          label="Capacité"
-          value={String(activeSpaces)}
-          detail="Places actives configurées dans Prisma"
+          icon={TrendingUp}
+          label="CA 30 jours"
+          value={revenueValue(summary?.revenue.last30DaysInCents, summary?.currency)}
+          detail={paidDetail(summary?.paidReservations.last30Days)}
         />
+        <StatCard
+          icon={Gauge}
+          label="Occupation"
+          value={`${Math.round(occupancy.rate * 100)} %`}
+          detail={`${occupancy.activeReservations} créneau(x) actif(s) / ${occupancy.activeSpaces} place(s)`}
+        />
+      </section>
+
+      <section className="mt-8 grid gap-6 xl:grid-cols-[1.8fr_1fr]">
+        <div className="rounded-lg border border-border bg-white p-5 shadow-panel">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ink">Chiffre d&apos;affaires (14 jours)</h2>
+            <SquareParking aria-hidden="true" className="text-muted" size={18} />
+          </div>
+          <div className="mt-4">
+            {summary ? (
+              <DailyRevenueChart points={summary.dailyRevenue} currency={summary.currency} />
+            ) : (
+              <p className="text-sm text-muted">Indicateurs indisponibles (API).</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-white p-5 shadow-panel">
+          <h2 className="text-lg font-semibold text-ink">Réservations (30 jours)</h2>
+          <p className="mt-1 text-sm text-muted">Répartition par statut.</p>
+          <ul className="mt-4 space-y-2">
+            {RESERVATION_STATUS_OPTIONS.map((status) => {
+              const meta = statusMeta(RESERVATION_STATUS_META, status);
+              const count = summary?.reservationsByStatus[status] ?? 0;
+              return (
+                <li key={status} className="flex items-center justify-between">
+                  <StatusPill label={meta.label} tone={meta.tone} />
+                  <span className="text-sm font-semibold text-ink">{count}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1.8fr_1fr]">
         <div className="rounded-lg border border-border bg-white shadow-panel">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-lg font-semibold text-ink">Parkings configurés</h2>
-            {firstParking ? (
-              <Link className="text-sm font-semibold text-brand" href={`/parkings/${firstParking.slug}`}>
-                Ouvrir la page publique
-              </Link>
-            ) : null}
+            <Link className="text-sm font-semibold text-brand" href="/exploitation/configuration">
+              Configurer
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] border-collapse text-left text-sm">
@@ -99,21 +156,29 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {parkings.map((parking) => (
-                  <tr key={parking.id} className="border-t border-border">
-                    <td className="px-5 py-4 font-medium text-ink">{parking.name}</td>
-                    <td className="px-5 py-4 text-muted">{parking.city}</td>
-                    <td className="px-5 py-4 text-muted">{parking.activeSpaces}</td>
-                    <td className="px-5 py-4 text-muted">{parking.activeReservations}</td>
-                    <td className="px-5 py-4">
-                      {parking.isPublished ? (
-                        <StatusPill label="Publié" tone="brand" />
-                      ) : (
-                        <StatusPill label="Brouillon" tone="slate" />
-                      )}
+                {parkings.length === 0 ? (
+                  <tr>
+                    <td className="px-5 py-4 text-muted" colSpan={5}>
+                      Aucun parking. <Link className="font-semibold text-brand" href="/exploitation/configuration">Configurer un parking</Link>.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  parkings.map((parking) => (
+                    <tr key={parking.id} className="border-t border-border">
+                      <td className="px-5 py-4 font-medium text-ink">{parking.name}</td>
+                      <td className="px-5 py-4 text-muted">{parking.city}</td>
+                      <td className="px-5 py-4 text-muted">{parking.activeSpaces}</td>
+                      <td className="px-5 py-4 text-muted">{parking.activeReservations}</td>
+                      <td className="px-5 py-4">
+                        {parking.isPublished ? (
+                          <StatusPill label="Publié" tone="brand" />
+                        ) : (
+                          <StatusPill label="Brouillon" tone="slate" />
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -131,8 +196,10 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-5 space-y-3">
             <div className="rounded-lg border border-border p-3">
-              <p className="text-sm font-medium text-ink">Tenant dev</p>
-              <p className="mt-1 text-sm text-muted">Les appels exploitant utilisent l'en-tête x-tenant-id.</p>
+              <p className="text-sm font-medium text-ink">CA reconnu</p>
+              <p className="mt-1 text-sm text-muted">
+                Réservations confirmées ou terminées uniquement.
+              </p>
             </div>
             <div className="rounded-lg border border-border p-3">
               <p className="text-sm font-medium text-ink">RGPD plaques</p>
@@ -198,6 +265,28 @@ export default async function DashboardPage() {
   );
 }
 
+function revenueValue(amountInCents: number | undefined, currency: string | undefined): string {
+  if (amountInCents === undefined) {
+    return EMPTY;
+  }
+  return formatCurrencyFromCents(amountInCents, currency ?? "EUR");
+}
+
+function paidDetail(count: number | undefined): string {
+  if (count === undefined) {
+    return "Données indisponibles";
+  }
+  return `${count} réservation(s) payée(s)`;
+}
+
+async function getDashboard(): Promise<DashboardSummary | null> {
+  try {
+    return await fetchTenantDashboard();
+  } catch {
+    return null;
+  }
+}
+
 async function getReservations(parkingId: string): Promise<ReservationSummary[]> {
   try {
     return await fetchTenantReservations(parkingId);
@@ -208,10 +297,7 @@ async function getReservations(parkingId: string): Promise<ReservationSummary[]>
 
 async function getParkings(): Promise<{ parkings: ParkingSummary[]; error: string | null }> {
   try {
-    return {
-      parkings: await fetchTenantParkings(),
-      error: null,
-    };
+    return { parkings: await fetchTenantParkings(), error: null };
   } catch (fetchError) {
     return {
       parkings: [],
