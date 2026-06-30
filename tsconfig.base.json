@@ -13,12 +13,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "paths": {
-      "@bingoz/domain": ["packages/domain/src/index.ts"],
-      "@bingoz/domain/*": ["packages/domain/src/*"],
-      "@bingoz/hardware": ["packages/hardware/src/index.ts"],
-      "@bingoz/hardware/*": ["packages/hardware/src/*"]
+      "@bingoz/domain": ["./packages/domain/src/index.ts"],
+      "@bingoz/domain/*": ["./packages/domain/src/*"],
+      "@bingoz/hardware": ["./packages/hardware/src/index.ts"],
+      "@bingoz/hardware/*": ["./packages/hardware/src/*"]
     }
   }
 }

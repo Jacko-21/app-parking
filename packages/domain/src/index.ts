@@ -26,3 +26,15 @@ export type {
   TimeWindow,
   CapacityAvailability,
 } from "./availability";
+
+export {
+  summarizeDashboard,
+  isRevenueStatus,
+  REVENUE_RESERVATION_STATUSES,
+} from "./dashboard";
+export type {
+  DashboardReservation,
+  DashboardDailyPoint,
+  SummarizeDashboardInput,
+  DashboardSummary,
+} from "./dashboard";
