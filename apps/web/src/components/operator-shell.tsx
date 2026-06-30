@@ -4,12 +4,18 @@ import {
   LayoutDashboard,
   type LucideIcon,
   ParkingCircle,
+  Settings,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export type OperatorSection = "dashboard" | "reservations" | "subscriptions" | "incidents";
+export type OperatorSection =
+  | "dashboard"
+  | "reservations"
+  | "subscriptions"
+  | "incidents"
+  | "configuration";
 
 type NavItem = {
   key: OperatorSection;
@@ -23,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "reservations", label: "Réservations", href: "/exploitation/reservations", icon: CalendarDays },
   { key: "subscriptions", label: "Abonnés", href: "/exploitation/abonnes", icon: Users },
   { key: "incidents", label: "Incidents", href: "/exploitation/incidents", icon: AlertTriangle },
+  { key: "configuration", label: "Configuration", href: "/exploitation/configuration", icon: Settings },
 ];
 
 type OperatorShellProps = {

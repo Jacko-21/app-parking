@@ -57,13 +57,42 @@ export function statusMeta(map: Record<string, StatusMeta>, status: string): Sta
 const OFFER_TYPE_LABELS: Record<string, string> = {
   hourly: "Horaire",
   daily: "Journalier",
+  nightly: "Nuitée",
   monthly: "Mensuel",
   subscription: "Abonnement",
-  event: "Événementiel",
 };
+
+export const OFFER_TYPE_OPTIONS = ["hourly", "daily", "nightly", "monthly", "subscription"] as const;
 
 export function offerTypeLabel(type: string): string {
   return OFFER_TYPE_LABELS[type] ?? type;
+}
+
+const SPACE_TYPE_LABELS: Record<string, string> = {
+  hourly: "Horaire",
+  subscriber: "Abonné",
+  pmr: "PMR",
+  ev: "Recharge",
+  mixed: "Mixte",
+};
+
+export const SPACE_TYPE_OPTIONS = ["mixed", "hourly", "subscriber", "pmr", "ev"] as const;
+
+export function spaceTypeLabel(type: string): string {
+  return SPACE_TYPE_LABELS[type] ?? type;
+}
+
+const PRICE_UNIT_LABELS: Record<string, string> = {
+  hour: "par heure",
+  day: "par jour",
+  month: "par mois",
+  flat: "forfait",
+};
+
+export const PRICE_UNIT_OPTIONS = ["hour", "day", "month", "flat"] as const;
+
+export function priceUnitLabel(unit: string): string {
+  return PRICE_UNIT_LABELS[unit] ?? unit;
 }
 
 export function formatCurrencyFromCents(amountInCents: number, currency: string): string {

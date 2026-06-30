@@ -51,14 +51,16 @@ Un MVP qui :
 > **Avancement console exploitant (`2026-06-30`)** — une console web (`/exploitation/*`) relie
 > désormais l'interface aux endpoints existants :
 >
+> - **Configuration / onboarding** : création d'un parking, paramétrage des zones, des places
+>   (type, zone, activation), des offres et des grilles tarifaires, puis publication / dépublication.
 > - **Réservations** : liste filtrable par statut, création manuelle (devis + disponibilité côté API)
 >   et annulation. La vue calendrier reste à faire.
 > - **Abonnés** : liste, création, désactivation et suppression d'un contrat (dates de début/fin).
 >   L'attribution de place et le plan tarifaire restent à câbler.
 > - **Incidents** : ouverture d'un incident et évolution de son statut.
 >
-> Reste à construire côté exploitant : onboarding guidé, configuration parking/tarifs, encaissements
-> et multi-utilisateurs.
+> Reste à construire côté exploitant : création de compte tenant en self-service, connexion Stripe
+> Connect, encaissements / exports comptables, tableau de bord chiffré et multi-utilisateurs.
 
 ### Côté automobiliste (web responsive — pas d'app native au MVP)
 
